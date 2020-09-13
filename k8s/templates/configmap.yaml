@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: capture-criminal-tg-bot
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: capture-criminal-tg-bot
+data:
+  config.yaml: {{ toYaml .Values.config | indent 2 }}
