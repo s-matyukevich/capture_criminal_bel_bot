@@ -7,6 +7,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/s-matyukevich/capture-criminal-tg-bot/src/common"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"go.uber.org/zap"
 
@@ -78,6 +80,8 @@ func main() {
 		if err != nil {
 			logger.Error("server error", zap.Error(err))
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Ошибка сервера, пожалуйста, скопируйте это сообщение в чат тех поддержки https://t.me/capture_criminal_support  "+err.Error())
+			msg.ReplyMarkup = common.MainKeyboard
+			db.SaveState(update.Message.Chat.ID, "start")
 			bot.Send(msg)
 		}
 	}

@@ -14,12 +14,6 @@ type ReportStart struct {
 
 func (s *ReportStart) Process(update tgbotapi.Update) (string, error) {
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "")
-	if update.Message.Text == common.BtnCancelText {
-		msg.Text = "Операция отменена"
-		msg.ReplyMarkup = common.MainKeyboard
-		_, err := s.bot.Send(msg)
-		return "start", err
-	}
 	if update.Message.Location == nil {
 		msg.Text = "Пожалуйста, укажите Ваше местоложение"
 		msg.ReplyMarkup = common.GetLocationKeyboard

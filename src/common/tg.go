@@ -72,6 +72,9 @@ var ChooseDistKeyboard = tgbotapi.NewReplyKeyboard(
 	tgbotapi.NewKeyboardButtonRow(
 		tgbotapi.NewKeyboardButton(Dist["all"]),
 	),
+	tgbotapi.NewKeyboardButtonRow(
+		tgbotapi.NewKeyboardButton(BtnCancelText),
+	),
 )
 
 var ChooseNumberKeyboard = tgbotapi.NewReplyKeyboard(
@@ -84,5 +87,8 @@ var ChooseNumberKeyboard = tgbotapi.NewReplyKeyboard(
 		tgbotapi.NewKeyboardButton("10"),
 		tgbotapi.NewKeyboardButton("15"),
 		tgbotapi.NewKeyboardButton("20"),
+	),
+	tgbotapi.NewKeyboardButtonRow(
+		tgbotapi.NewKeyboardButton(BtnCancelText),
 	),
 )

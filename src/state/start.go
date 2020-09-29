@@ -25,7 +25,7 @@ func (s *Start) Process(update tgbotapi.Update) (string, error) {
 		msg.ReplyMarkup = common.GetLocationKeyboard
 		newState = "watchStart"
 	case common.BtnStopText:
-		msg.Text = "Ок, я перестану слать вам нотификации"
+		msg.Text = "Ок, я перестану слать Вам нотификации"
 		err := removeAllWatches(update.Message.Chat.ID, s.db)
 		if err != nil {
 			return "", err

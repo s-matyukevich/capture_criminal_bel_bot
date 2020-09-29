@@ -37,7 +37,7 @@ func (s *Watch) Process(update tgbotapi.Update) (string, error) {
 	}
 
 	msg.ReplyMarkup = common.MainKeyboard
-	msg.Text = "Готово! Как только у меня появится информация и тихарях, которые находятся поблизости, я сразу дам Вам знать."
+	msg.Text = "Готово! Как только у меня появится информация о тихарях, которые находятся поблизости, я сразу дам Вам знать."
 	_, err = s.bot.Send(msg)
 	return "start", err
 }

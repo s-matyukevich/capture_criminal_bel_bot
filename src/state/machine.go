@@ -46,21 +46,32 @@ func (m *StateMachine) Process(update tgbotapi.Update) error {
 		}
 		return m.db.SaveState(update.Message.Chat.ID, "start")
 	}
+	if update.Message.Text == common.BtnCancelText {
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "")
+		msg.Text = "Операция отменена"
+		msg.ReplyMarkup = common.MainKeyboard
+		_, err := m.bot.Send(msg)
+		if err != nil {
+			return err
+		}
+		return m.db.SaveState(update.Message.Chat.ID, "start")
+	}
 
 	dbState, err := m.db.GetState(update.Message.Chat.ID)
 	if err != nil {
 		return err
 	}
 	s := m.parseState(dbState)
-
 	newState, err := s.Process(update)
+
+	var saveStateError error
+	if newState != "" {
+		saveStateError = m.db.SaveState(update.Message.Chat.ID, newState)
+	}
 	if err != nil {
 		return err
 	}
-	if newState != "" {
-		return m.db.SaveState(update.Message.Chat.ID, newState)
-	}
-	return nil
+	return saveStateError
 }
 
 func (m *StateMachine) parseState(state string) IState {

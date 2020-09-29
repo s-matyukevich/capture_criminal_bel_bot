@@ -49,7 +49,7 @@ func (s *Show) Process(update tgbotapi.Update) (string, error) {
 			return "start", err
 		}
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "")
-		msg.Text = fmt.Sprintf(`**Отправлено**: %d минут назад
+		msg.Text = fmt.Sprintf(`**Отправлено**: %d минут(ы) назад
 **Расстояние**: %s м
 **Сообщение**: %s`, int(time.Now().Sub(r.Timestamp).Minutes()), r.Dist, r.Message)
 		msg.ParseMode = tgbotapi.ModeMarkdown

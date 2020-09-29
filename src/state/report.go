@@ -35,6 +35,9 @@ func (s *Report) forwardMessage(location *tgbotapi.Location, update tgbotapi.Upd
 			continue
 		}
 		for _, id := range ids {
+			if id == update.Message.Chat.ID {
+				continue
+			}
 			msgL := tgbotapi.NewLocation(id, location.Latitude, location.Longitude)
 			_, err := s.bot.Send(msgL)
 			if err != nil {
