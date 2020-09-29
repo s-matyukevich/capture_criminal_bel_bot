@@ -57,6 +57,14 @@ func (s *Show) Process(update tgbotapi.Update) (string, error) {
 		if err != nil {
 			return "start", err
 		}
+		if r.PhotoId != "" {
+			msg := tgbotapi.NewPhotoShare(update.Message.Chat.ID, r.PhotoId)
+			msg.Caption = r.PhotoCaption
+			_, err = s.bot.Send(msg)
+			if err != nil {
+				return "start", err
+			}
+		}
 	}
 	return "start", nil
 }

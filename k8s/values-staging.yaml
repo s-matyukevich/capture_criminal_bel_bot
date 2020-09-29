@@ -1,0 +1,9 @@
+image:
+  image: smatyukevich/capture-criminal-tg-bot
+  
+replicas: 1
+namespace: tg-prod
+  
+redis:
+  usePassword: false
+  

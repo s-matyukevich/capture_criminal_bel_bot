@@ -27,7 +27,7 @@ func (s *ReportStart) Process(update tgbotapi.Update) (string, error) {
 	}
 
 	msg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(false)
-	msg.Text = "Принято! Теперь дайте краткое описание. Например, 'Синий бус без номеров припарковался возле ЦУМа' или 'Два тихаря зашли во двор на Притыцкого 25'"
+	msg.Text = "Принято! Теперь пришлите картинку или дайте краткое описание. Например, 'Синий бус без номеров припарковался возле ЦУМа' или 'Два тихаря зашли во двор на Притыцкого 25'"
 	_, err = s.bot.Send(msg)
 	return "report", err
 }

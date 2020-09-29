@@ -155,11 +155,13 @@ func (d *DB) GetClosestReports(chatId int64, num int) ([]*common.ReportInfo, err
 			return nil, err
 		}
 		reports = append(reports, &common.ReportInfo{
-			Message:   r.Message,
-			Timestamp: r.Timestamp,
-			Latitude:  l.Latitude,
-			Longitude: l.Longitude,
-			Dist:      strconv.FormatInt(int64(l.Dist), 10),
+			Message:      r.Message,
+			PhotoId:      r.PhotoId,
+			PhotoCaption: r.PhotoCaption,
+			Timestamp:    r.Timestamp,
+			Latitude:     l.Latitude,
+			Longitude:    l.Longitude,
+			Dist:         strconv.FormatInt(int64(l.Dist), 10),
 		})
 	}
 	return reports, nil
