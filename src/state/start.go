@@ -16,10 +16,22 @@ func (s *Start) Process(update tgbotapi.Update) (string, error) {
 	msg.ReplyMarkup = common.MainKeyboard
 	newState := ""
 	switch update.Message.Text {
-	case common.BtnReportText:
+	case common.BtnAlienText:
 		msg.Text = "Ок, сперва мне нужно узнать где Вы находитесь"
 		msg.ReplyMarkup = common.GetLocationKeyboard
-		newState = "reportStart"
+		newState = "reportAlienStart"
+	case common.BtnPoliceText:
+		msg.Text = "Ок, сперва мне нужно узнать где Вы находитесь"
+		msg.ReplyMarkup = common.GetLocationKeyboard
+		newState = "reportPoliceStart"
+	case common.BtnPoliceCarText:
+		msg.Text = "Ок, сперва мне нужно узнать где Вы находитесь"
+		msg.ReplyMarkup = common.GetLocationKeyboard
+		newState = "reportPoliceCarStart"
+	case common.BtnOtherText:
+		msg.Text = "Ок, сперва мне нужно узнать где Вы находитесь"
+		msg.ReplyMarkup = common.GetLocationKeyboard
+		newState = "reportOtherStart"
 	case common.BtnWatchText:
 		msg.Text = "Ок, сперва мне нужно узнать где Вы находитесь"
 		msg.ReplyMarkup = common.GetLocationKeyboard
@@ -33,7 +45,7 @@ func (s *Start) Process(update tgbotapi.Update) (string, error) {
 	case common.BtnShowText:
 		msg.Text = "Ок, сперва мне нужно узнать где Вы находитесь"
 		msg.ReplyMarkup = common.GetLocationKeyboard
-		newState = "showStart"
+		newState = "show"
 	default:
 		msg.Text = "Пожалуйста, выберите один из вариантов."
 	}

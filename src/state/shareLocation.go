@@ -7,12 +7,15 @@ import (
 	dbpkg "github.com/s-matyukevich/capture-criminal-tg-bot/src/db"
 )
 
-type ReportStart struct {
-	bot *tgbotapi.BotAPI
-	db  *dbpkg.DB
+type ShareLocation struct {
+	bot       *tgbotapi.BotAPI
+	db        *dbpkg.DB
+	nextState string
+	message   string
+	keyboard  interface{}
 }
 
-func (s *ReportStart) Process(update tgbotapi.Update) (string, error) {
+func (s *ShareLocation) Process(update tgbotapi.Update) (string, error) {
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "")
 	if update.Message.Location == nil {
 		msg.Text = "Пожалуйста, укажите Ваше местоложение"
@@ -26,8 +29,8 @@ func (s *ReportStart) Process(update tgbotapi.Update) (string, error) {
 		return "", err
 	}
 
-	msg.ReplyMarkup = tgbotapi.NewRemoveKeyboard(false)
-	msg.Text = "Принято! Теперь пришлите картинку или дайте краткое описание. Например, 'Синий бус без номеров припарковался возле ЦУМа' или 'Два тихаря зашли во двор на Притыцкого 25'"
+	msg.ReplyMarkup = s.keyboard
+	msg.Text = s.message
 	_, err = s.bot.Send(msg)
-	return "report", err
+	return s.nextState, err
 }

@@ -58,7 +58,7 @@ func main() {
 	u.Timeout = 60
 
 	updates, err := bot.GetUpdatesChan(u)
-	machine := state.NewStateMachine(bot, db, logger)
+	machine := state.NewStateMachine(bot, db, logger, config)
 
 	go func() {
 		for {

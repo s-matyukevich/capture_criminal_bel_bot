@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -45,6 +46,24 @@ func (d *DB) SaveState(chatId int64, state string) error {
 	ctx := context.Background()
 	_, err := d.db.Set(ctx, "state_"+strconv.FormatInt(chatId, 10), state, 0).Result()
 	return err
+}
+
+func (d *DB) GetAllChats() ([]int64, error) {
+	ctx := context.Background()
+	res, err := d.db.Keys(ctx, "state_*").Result()
+	if err != nil {
+		return nil, err
+	}
+	keys := []int64{}
+	for _, k := range res {
+		k = strings.TrimPrefix(k, "state_")
+		i, err := strconv.ParseInt(k, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, i)
+	}
+	return keys, err
 }
 
 func (d *DB) SaveLocation(chatId int64, location *tgbotapi.Location) error {
@@ -126,12 +145,8 @@ func (d *DB) SaveReport(chatId int64, report *common.Report) (*tgbotapi.Location
 	return location, err
 }
 
-func (d *DB) GetClosestReports(chatId int64, num int) ([]*common.ReportInfo, error) {
+func (d *DB) GetClosestReports(chatId int64, location *tgbotapi.Location, num int) ([]*common.ReportInfo, error) {
 	ctx := context.Background()
-	location, err := d.getSavedLocation(chatId)
-	if err != nil {
-		return nil, err
-	}
 	reports := []*common.ReportInfo{}
 	geoLocations, err := d.db.GeoRadius(ctx, "reports", location.Longitude, location.Latitude, &redis.GeoRadiusQuery{
 		Radius:    10000,
@@ -154,10 +169,14 @@ func (d *DB) GetClosestReports(chatId int64, num int) ([]*common.ReportInfo, err
 		if err != nil {
 			return nil, err
 		}
+		if r.Type == "" {
+			r.Type = "alien"
+		}
 		reports = append(reports, &common.ReportInfo{
 			Message:      r.Message,
 			PhotoId:      r.PhotoId,
 			PhotoCaption: r.PhotoCaption,
+			Type:         r.Type,
 			Timestamp:    r.Timestamp,
 			Latitude:     l.Latitude,
 			Longitude:    l.Longitude,
@@ -195,14 +214,15 @@ func (d *DB) DeleteExpiredReports() error {
 			break
 		}
 	}
-	_, err := d.db.ZRem(ctx, "reports", toDel...).Result()
-	if err != nil {
-		return err
-	}
+
 	if len(toDel) > 0 {
+		_, err := d.db.ZRem(ctx, "reports", toDel...).Result()
+		if err != nil {
+			return err
+		}
 		d.logger.Info(fmt.Sprintf("Deleted %s reports", len(toDel)))
 	}
-	return err
+	return nil
 }
 
 func (d *DB) getSavedLocation(chatId int64) (*tgbotapi.Location, error) {

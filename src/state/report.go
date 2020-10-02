@@ -9,9 +9,10 @@ import (
 )
 
 type Report struct {
-	bot    *tgbotapi.BotAPI
-	db     *dbpkg.DB
-	logger *zap.Logger
+	bot        *tgbotapi.BotAPI
+	db         *dbpkg.DB
+	logger     *zap.Logger
+	reportType string
 }
 
 func (s *Report) Process(update tgbotapi.Update) (string, error) {
@@ -21,7 +22,7 @@ func (s *Report) Process(update tgbotapi.Update) (string, error) {
 		photoId = (*update.Message.Photo)[0].FileID
 		photoCaption = update.Message.Caption
 	}
-	location, err := s.db.SaveReport(update.Message.Chat.ID, &common.Report{update.Message.Time(), update.Message.Text, photoId, photoCaption})
+	location, err := s.db.SaveReport(update.Message.Chat.ID, &common.Report{update.Message.Time(), update.Message.Text, photoId, photoCaption, s.reportType})
 	if err != nil {
 		return "", err
 	}
@@ -51,7 +52,7 @@ func (s *Report) forwardMessage(location *tgbotapi.Location, update tgbotapi.Upd
 				continue
 			}
 			if update.Message.Text != "" {
-				msg := tgbotapi.NewMessage(id, update.Message.Text)
+				msg := tgbotapi.NewMessage(id, common.ReportTypes[s.reportType]+"\n"+update.Message.Text)
 				_, err = s.bot.Send(msg)
 				if err != nil {
 					s.logger.Error("Can't send location description", zap.Error(err), zap.Int64("chatId", id))
@@ -60,7 +61,7 @@ func (s *Report) forwardMessage(location *tgbotapi.Location, update tgbotapi.Upd
 			}
 			if photoId != "" {
 				msg := tgbotapi.NewPhotoShare(id, photoId)
-				msg.Caption = photoCaption
+				msg.Caption = common.ReportTypes[s.reportType] + "\n" + photoCaption
 				_, err = s.bot.Send(msg)
 				if err != nil {
 					s.logger.Error("Can't send photo", zap.Error(err), zap.Int64("chatId", id))

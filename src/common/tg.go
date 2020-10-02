@@ -5,14 +5,25 @@ import (
 )
 
 const (
-	BtnReportText = "\U0001F47D Сдать тихаря"
-	BtnShowText   = "\U0001F50E Показать ближайших тихарей"
-	BtnWatchText  = "\U0001F440 Cледить за тихарями"
-	BtnStopText   = "\U0000274c Перестать следить за тихарями"
+	//BtnReportText    = "\U00002795 Сдать (\U0001F47D | \U0001F46E | \U0001F694)"
+	BtnAlienText     = "\U00002795 Тихарь \U0001F47D"
+	BtnPoliceText    = "\U00002795 Омон \U0001F46E"
+	BtnPoliceCarText = "\U00002795 Aвтозак \U0001F694"
+	BtnOtherText     = "\U00002795 Другое \U0001F937"
+	BtnShowText      = "\U0001F50E Найти"
+	BtnWatchText     = "\U0001F514 Подписаться"
+	BtnStopText      = "\U0001F515 Отписаться"
 
 	BtnShareLocationText = "\U0001F30D Поделиться своим местоположением"
-	BtnCancelText        = "\U0000274c Отмена"
+	BtnCancelText        = "\U00002B05 Назад"
 )
+
+var ReportTypes = map[string]string{
+	"alien":     "\U0001F47D Тихарь",
+	"police":    "\U0001F46E Омон",
+	"policeCar": "\U0001F694 Aвтозак",
+	"other":     "\U0001F937 Другое",
+}
 
 var Dist = map[string]string{
 	"200m": "200 м",
@@ -21,7 +32,7 @@ var Dist = map[string]string{
 	"2k":   "2 км",
 	"5k":   "5 км",
 	"10k":  "10 км",
-	"all":  "Я хочу отслеживать всех тихарей",
+	"all":  "Я хочу получать все уведомления",
 }
 
 var DistUnits = map[string]float64{
@@ -36,15 +47,18 @@ var DistUnits = map[string]float64{
 
 var MainKeyboard = tgbotapi.NewReplyKeyboard(
 	tgbotapi.NewKeyboardButtonRow(
-		tgbotapi.NewKeyboardButton(BtnReportText),
+		tgbotapi.NewKeyboardButton(BtnAlienText),
+		tgbotapi.NewKeyboardButton(BtnPoliceText),
+	),
+	tgbotapi.NewKeyboardButtonRow(
+		tgbotapi.NewKeyboardButton(BtnPoliceCarText),
+		tgbotapi.NewKeyboardButton(BtnOtherText),
 	),
 	tgbotapi.NewKeyboardButtonRow(
 		tgbotapi.NewKeyboardButton(BtnShowText),
 	),
 	tgbotapi.NewKeyboardButtonRow(
 		tgbotapi.NewKeyboardButton(BtnWatchText),
-	),
-	tgbotapi.NewKeyboardButtonRow(
 		tgbotapi.NewKeyboardButton(BtnStopText),
 	),
 )

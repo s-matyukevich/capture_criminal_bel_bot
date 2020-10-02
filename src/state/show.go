@@ -2,7 +2,6 @@ package state
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
@@ -17,24 +16,26 @@ type Show struct {
 }
 
 func (s *Show) Process(update tgbotapi.Update) (string, error) {
-	num, err := strconv.Atoi(update.Message.Text)
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "")
-	if err != nil || num < 1 || num > 20 {
-		msg.Text = "Значение должно быть в диапазоне [1 - 20]"
+	if update.Message.Location == nil {
+		msg.Text = "Пожалуйста, укажите Ваше местоложение"
+		msg.ReplyMarkup = common.GetLocationKeyboard
 		_, err := s.bot.Send(msg)
 		return "", err
 	}
-	reports, err := s.db.GetClosestReports(update.Message.Chat.ID, num)
+
+	num := 10
+	reports, err := s.db.GetClosestReports(update.Message.Chat.ID, update.Message.Location, num)
 	if err != nil {
 		return "", err
 	}
 
 	if len(reports) == 0 {
-		msg.Text = "В течение получаса никто не репортил тихарей в радиусе 10 км от Вас"
+		msg.Text = "В течение получаса мне не поступало репортов в радиусе 10 км от Вас"
 	} else if len(reports) < num {
-		msg.Text = fmt.Sprintf("Найдено %d тихарей в радиусе 10 км от Вас", len(reports))
+		msg.Text = fmt.Sprintf("Найдено %d объектов в радиусе 10 км от Вас", len(reports))
 	} else {
-		msg.Text = fmt.Sprintf("Пересылаю %d ближайших тихарей", len(reports))
+		msg.Text = fmt.Sprintf("Пересылаю %d ближайших объектов", len(reports))
 	}
 	msg.ReplyMarkup = common.MainKeyboard
 	_, err = s.bot.Send(msg)
@@ -51,7 +52,8 @@ func (s *Show) Process(update tgbotapi.Update) (string, error) {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "")
 		msg.Text = fmt.Sprintf(`**Отправлено**: %d минут(ы) назад
 **Расстояние**: %s м
-**Сообщение**: %s`, int(time.Now().Sub(r.Timestamp).Minutes()), r.Dist, r.Message)
+**Метка**: %s
+**Сообщение**: %s`, int(time.Now().Sub(r.Timestamp).Minutes()), r.Dist, common.ReportTypes[r.Type], r.Message)
 		msg.ParseMode = tgbotapi.ModeMarkdown
 		_, err = s.bot.Send(msg)
 		if err != nil {
