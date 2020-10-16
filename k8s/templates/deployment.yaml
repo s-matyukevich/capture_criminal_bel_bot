@@ -24,13 +24,21 @@ spec:
       - name: main
         image: "{{ $.Values.image.image }}:{{ $.Values.image.tag }}"
         imagePullPolicy: Always
-        command: ["/app/app"]
+        command: ["bash"]
+        #command: ["sleep"]
         args:
-        - "-config=/etc/capture-criminal-tg-bot/config.yaml"
+        #- "1000"
+        - "-c"
+        - "/app/app -config=/etc/capture-criminal-tg-bot/config.yaml"
         volumeMounts:
         - name: config
           mountPath: /etc/capture-criminal-tg-bot
+        - name: tdlib
+          mountPath: /app/.tdlib
       volumes:
       - name: config
         configMap:
           name: capture-criminal-tg-bot
+      - name: tdlib
+        persistentVolumeClaim:
+          claimName: pvc-tdlib

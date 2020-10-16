@@ -48,6 +48,21 @@ func (d *DB) SaveState(chatId int64, state string) error {
 	return err
 }
 
+func (d *DB) GetLastRead(chatId int64) (int64, error) {
+	ctx := context.Background()
+	val, err := d.db.Get(ctx, "last_read_"+strconv.FormatInt(chatId, 10)).Result()
+	if err == redis.Nil {
+		return 0, nil
+	}
+	return strconv.ParseInt(val, 10, 64)
+}
+
+func (d *DB) SaveLastRead(chatId int64, val int64) error {
+	ctx := context.Background()
+	_, err := d.db.Set(ctx, "last_read_"+strconv.FormatInt(chatId, 10), strconv.FormatInt(val, 10), 0).Result()
+	return err
+}
+
 func (d *DB) GetAllChats() ([]int64, error) {
 	ctx := context.Background()
 	res, err := d.db.Keys(ctx, "state_*").Result()
@@ -96,7 +111,7 @@ func (d *DB) SaveWatch(chatId int64, key string) error {
 	return err
 }
 
-func (d *DB) GetNearbyIds(chatId int64, key string, location *tgbotapi.Location, radius float64, unit string) ([]int64, *tgbotapi.Location, error) {
+func (d *DB) GetNearbyIds(key string, location *tgbotapi.Location, radius float64, unit string) ([]int64, *tgbotapi.Location, error) {
 	ctx := context.Background()
 	ans := []int64{}
 	geoLocations, err := d.db.GeoRadius(ctx, "watch_"+key, location.Longitude, location.Latitude, &redis.GeoRadiusQuery{
@@ -117,7 +132,7 @@ func (d *DB) GetNearbyIds(chatId int64, key string, location *tgbotapi.Location,
 		}
 		ans = append(ans, id)
 	}
-	d.logger.Debug("found IDs", zap.Any("ids", ans), zap.Any("location", location), zap.Any("radius", radius), zap.Any("unit", unit), zap.Any("key", key))
+	//d.logger.Debug("found IDs", zap.Any("ids", ans), zap.Any("location", location), zap.Any("radius", radius), zap.Any("unit", unit), zap.Any("key", key))
 	return ans, location, nil
 }
 
@@ -127,11 +142,14 @@ func (d *DB) DeleteWatch(chatId int64, key string) error {
 	return err
 }
 
-func (d *DB) SaveReport(chatId int64, report *common.Report) (*tgbotapi.Location, error) {
+func (d *DB) SaveReport(chatId int64, report *common.Report, location *tgbotapi.Location) (*tgbotapi.Location, error) {
 	ctx := context.Background()
-	location, err := d.getSavedLocation(chatId)
-	if err != nil {
-		return nil, err
+	var err error
+	if location == nil {
+		location, err = d.getSavedLocation(chatId)
+		if err != nil {
+			return nil, err
+		}
 	}
 	data, err := json.Marshal(report)
 	if err != nil {
@@ -195,7 +213,7 @@ func (d *DB) DeleteExpiredReports() error {
 		if err != nil {
 			return err
 		}
-		d.logger.Debug("Found keys", zap.Any("keys", keys))
+		//d.logger.Debug("Found keys", zap.Any("keys", keys))
 		for i, key := range keys {
 			if i%2 == 1 {
 				continue

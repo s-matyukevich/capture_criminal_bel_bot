@@ -8,10 +8,12 @@ import (
 	"time"
 
 	"github.com/s-matyukevich/capture-criminal-tg-bot/src/common"
+	"github.com/s-matyukevich/capture-criminal-tg-bot/src/forwarder"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"go.uber.org/zap"
 
+	yageocoding "github.com/FlameInTheDark/go-yandex-geocoding"
 	cfg "github.com/s-matyukevich/capture-criminal-tg-bot/src/config"
 	dbpkg "github.com/s-matyukevich/capture-criminal-tg-bot/src/db"
 	"github.com/s-matyukevich/capture-criminal-tg-bot/src/state"
@@ -49,6 +51,9 @@ func main() {
 	if err != nil {
 		log.Panic(err)
 	}
+	ygi := yageocoding.New(config.GeocodingKey)
+	f := forwarder.NewForwarder(bot, db, logger, config, ygi)
+	go f.Run()
 
 	//bot.Debug = true
 
