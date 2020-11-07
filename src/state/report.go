@@ -28,8 +28,7 @@ func (s *Report) Process(update tgbotapi.Update) (string, error) {
 		return "", err
 	}
 
-	go helpers.ForwardMessage(s.logger, s.bot, s.db, location, update.Message.Chat.ID, update.Message.Text, photoId, photoCaption, s.reportType, 0, "")
-	//go s.forwardMessage(location, update, photoId, photoCaption)
+	go helpers.ForwardMessage(s.logger, s.bot, s.db, location, update.Message.Chat.ID, update.Message.Text, photoId, photoCaption, s.reportType, true)
 	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Отлично! Я разошлю всем в округе Ваше сообщение.")
 	msg.ReplyMarkup = common.MainKeyboard
 	_, err = s.bot.Send(msg)

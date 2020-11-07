@@ -9,11 +9,13 @@ import (
 
 var LabelKeywords = map[string]map[string]interface{}{
 	"alien": {"тихарь": nil, "тихорь": nil, "тихори": nil, "космонавт": nil, "лошка": nil, "петушки": nil,
-		"оливка": nil, "шакал": nil},
+		"оливка": nil, "шакал": nil, "животное": nil, "сотрудник": nil},
 	"police": {"мент": nil, "мусор": nil, "омон": nil},
 	"policeCar": {"бус": nil, "бусик": nil, "бусы": nil, "буса": nil, "автозак": nil, "автобус": nil, "минивен": nil, "машина": nil, "бобик": nil,
 		"газель": nil, "газел": nil, "гаи": nil, "микроавтобус": nil, "микробус": nil, "форд": nil, "тонированный": nil, "маз": nil},
 }
+
+var ForwardTags = []string{"#дазор", "capture_crimianl_bel_bot"}
 
 var LocationMap = map[string]interface{}{}
 

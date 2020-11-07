@@ -52,8 +52,12 @@ func main() {
 		log.Panic(err)
 	}
 	ygi := yageocoding.New(config.GeocodingKey)
-	f := forwarder.NewForwarder(bot, db, logger, config, ygi)
+	f, err := forwarder.NewForwarder(bot, db, logger, config, ygi)
+	if err != nil {
+		logger.Fatal("Can't start forwarder", zap.Error(err))
+	}
 	go f.Run()
+	go f.RunForwarderByTags()
 
 	//bot.Debug = true
 

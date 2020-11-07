@@ -28,7 +28,7 @@ type Forwarder struct {
 	ygi         *yageocoding.YaGeoInstance
 }
 
-func NewForwarder(bot *tgbotapi.BotAPI, db *dbpkg.DB, logger *zap.Logger, config *config.Config, ygi *yageocoding.YaGeoInstance) *Forwarder {
+func NewForwarder(bot *tgbotapi.BotAPI, db *dbpkg.DB, logger *zap.Logger, config *config.Config, ygi *yageocoding.YaGeoInstance) (*Forwarder, error) {
 	authorizer := client.ClientAuthorizer()
 	//authorizer := client.BotAuthorizer(config.ApiToken)
 	authorizer.TdlibParameters <- &client.TdlibParameters{
@@ -57,7 +57,27 @@ func NewForwarder(bot *tgbotapi.BotAPI, db *dbpkg.DB, logger *zap.Logger, config
 		logger.Fatal("NewClient error", zap.Error(err))
 	}
 
-	return &Forwarder{tdlibClient, bot, db, logger, config, ygi}
+	for _, chat := range config.SourceChatIds {
+		res, err := tdlibClient.SearchPublicChat(&client.SearchPublicChatRequest{
+			Username: chat.Name,
+		})
+		if err != nil {
+			return nil, err
+		}
+		chat.Id = res.Id
+	}
+
+	for _, chat := range config.SourceByTagChatIds {
+		res, err := tdlibClient.SearchPublicChat(&client.SearchPublicChatRequest{
+			Username: chat.Name,
+		})
+		if err != nil {
+			return nil, err
+		}
+		chat.Id = res.Id
+	}
+
+	return &Forwarder{tdlibClient, bot, db, logger, config, ygi}, nil
 }
 
 func (f *Forwarder) Run() {
@@ -83,21 +103,17 @@ func (f *Forwarder) Run() {
 				if message.Id == lastMessage {
 					continue
 				}
-				if message.Content.MessageContentType() == "messageText" {
-					msg := message.Content.(*client.MessageText)
-					lbl, location := f.parseLabelAndLocation(msg.Text.Text)
+				text, msgLink := f.extractMessageText(message, chat)
+				if text != "" {
+					lbl, location := f.parseLabelAndLocation(text, chat.City, false)
 					if lbl != "" {
-						_, err := f.db.SaveReport(chat.Id, &common.Report{time.Now(), msg.Text.Text, "", "", lbl}, location)
+						_, err := f.db.SaveReport(chat.Id, &common.Report{time.Now(), msgLink, "", "", lbl}, location)
 						if err != nil {
 							f.logger.Error("Error saving report", zap.Error(err))
 						}
-						helpers.ForwardMessage(f.logger, f.bot, f.db, location, chat.Id, msg.Text.Text, "", "", lbl, message.Id>>20, chat.Name)
+						helpers.ForwardMessage(f.logger, f.bot, f.db, location, chat.Id, msgLink, "", "", lbl, false)
 					}
 				}
-				// } else if message.Content.MessageContentType() == "messagePhoto" {
-				// 	photo := message.Content.(*client.MessagePhoto)
-				// 	helpers.ForwardMessage(f.logger, f.bot, f.db, &tgbotapi.Location{0, 0}, chat.Id, "", photo.Photo.Sizes[0].Photo.Remote.UniqueId, photo.Caption.Text, "other")
-				// }
 			}
 			if len(messages.Messages) > 0 {
 				f.db.SaveLastRead(chat.Id, messages.Messages[0].Id)
@@ -107,7 +123,79 @@ func (f *Forwarder) Run() {
 	}
 }
 
-func (f *Forwarder) parseLabelAndLocation(text string) (string, *tgbotapi.Location) {
+func (f *Forwarder) RunForwarderByTags() {
+	for {
+		for _, chat := range f.config.SourceByTagChatIds {
+			lastMessage, err := f.db.GetLastRead(chat.Id)
+			if err != nil {
+				f.logger.Error("Error getting last message", zap.Error(err))
+				continue
+			}
+			messages, err := f.tdlibClient.GetChatHistory(&client.GetChatHistoryRequest{
+				ChatId:        chat.Id,
+				FromMessageId: lastMessage,
+				Limit:         5,
+				Offset:        -5,
+			})
+			if err != nil {
+				f.logger.Error("Error getting chat history", zap.Error(err))
+				continue
+			}
+			for i := len(messages.Messages) - 1; i >= 0; i-- {
+				message := messages.Messages[i]
+				if message.Id == lastMessage {
+					continue
+				}
+				text, msgLink := f.extractMessageText(message, chat)
+				tagMatch := false
+				for _, tag := range config.ForwardTags {
+					if strings.Contains(text, tag) {
+						tagMatch = true
+						break
+					}
+				}
+				if !tagMatch {
+					continue
+				}
+				f.logger.Info("New forward message by tag", zap.String("text", text))
+				if message.ReplyToMessageId != 0 {
+					replyMessages, err := f.tdlibClient.GetChatHistory(&client.GetChatHistoryRequest{
+						ChatId:        chat.Id,
+						FromMessageId: message.ReplyToMessageId,
+						Limit:         1,
+						Offset:        -1,
+					})
+					if err != nil {
+						f.logger.Error("Error getting reply chat history", zap.Error(err), zap.Int64("replyID", message.ReplyToMessageId))
+						continue
+					}
+					if len(replyMessages.Messages) != 1 {
+						f.logger.Error("Error getting reply chat history", zap.Error(err), zap.Int64("replyID", message.ReplyToMessageId))
+						continue
+					}
+					if message.Content.MessageContentType() != "messageText" {
+						continue
+					}
+					text, msgLink = f.extractMessageText(replyMessages.Messages[0], chat)
+				}
+				lbl, location := f.parseLabelAndLocation(text, chat.City, true)
+				if lbl != "" {
+					_, err := f.db.SaveReport(chat.Id, &common.Report{time.Now(), msgLink, "", "", lbl}, location)
+					if err != nil {
+						f.logger.Error("Error saving report", zap.Error(err))
+					}
+					helpers.ForwardMessage(f.logger, f.bot, f.db, location, chat.Id, msgLink, "", "", lbl, false)
+				}
+			}
+			if len(messages.Messages) > 0 {
+				f.db.SaveLastRead(chat.Id, messages.Messages[0].Id)
+			}
+		}
+		time.Sleep(10 * time.Second)
+	}
+}
+
+func (f *Forwarder) parseLabelAndLocation(text string, city string, force bool) (string, *tgbotapi.Location) {
 	text = strings.ToLower(text)
 	reg, err := regexp.Compile("[^а-яА-Я0-9]+")
 	if err != nil {
@@ -158,14 +246,29 @@ func (f *Forwarder) parseLabelAndLocation(text string) (string, *tgbotapi.Locati
 		}
 	}
 	f.logger.Info("Parse text: "+text, zap.Any("words", words), zap.String("label", label), zap.String("location", location))
-	if label == "" || location == "" {
+	if force && label == "" {
+		label = "other"
+	}
+	if !force && (label == "" || location == "") {
 		return "", nil
 	}
 
-	result, err := f.ygi.Find(url.QueryEscape("Беларусь Минск " + location))
+	result, err := f.ygi.Find(url.QueryEscape("Беларусь " + city + " " + location))
 	if err != nil {
 		f.logger.Error("Error resolving location", zap.Error(err))
 		return "", nil
 	}
 	return label, &tgbotapi.Location{result.Longitude(), result.Latitude()}
+}
+
+func (f *Forwarder) extractMessageText(message *client.Message, chat *config.SourceChat) (string, string) {
+	text := ""
+	if message.Content.MessageContentType() == "messageText" {
+		msg := message.Content.(*client.MessageText)
+		text = msg.Text.Text
+	} else if message.Content.MessageContentType() == "messagePhoto" {
+		msg := message.Content.(*client.MessagePhoto)
+		text = msg.Caption.Text
+	}
+	return text, "https://t.me/" + chat.Name + "/" + strconv.FormatInt(message.Id>>20, 10)
 }
