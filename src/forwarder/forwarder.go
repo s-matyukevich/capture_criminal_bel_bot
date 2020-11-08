@@ -131,11 +131,17 @@ func (f *Forwarder) RunForwarderByTags() {
 				f.logger.Error("Error getting last message", zap.Error(err))
 				continue
 			}
+			limit := int32(5)
+			offset := int32(-5)
+			if lastMessage == 0 {
+				limit = 1
+				offset = 0
+			}
 			messages, err := f.tdlibClient.GetChatHistory(&client.GetChatHistoryRequest{
 				ChatId:        chat.Id,
 				FromMessageId: lastMessage,
-				Limit:         5,
-				Offset:        -5,
+				Limit:         limit,
+				Offset:        offset,
 			})
 			if err != nil {
 				f.logger.Error("Error getting chat history", zap.Error(err))
@@ -154,37 +160,36 @@ func (f *Forwarder) RunForwarderByTags() {
 						break
 					}
 				}
-				if !tagMatch {
-					continue
-				}
-				f.logger.Info("New forward message by tag", zap.String("text", text))
-				if message.ReplyToMessageId != 0 {
-					replyMessages, err := f.tdlibClient.GetChatHistory(&client.GetChatHistoryRequest{
-						ChatId:        chat.Id,
-						FromMessageId: message.ReplyToMessageId,
-						Limit:         1,
-						Offset:        -1,
-					})
-					if err != nil {
-						f.logger.Error("Error getting reply chat history", zap.Error(err), zap.Int64("replyID", message.ReplyToMessageId))
-						continue
+				if tagMatch {
+					f.logger.Info("New forward message by tag", zap.String("text", text))
+					if message.ReplyToMessageId != 0 {
+						replyMessages, err := f.tdlibClient.GetChatHistory(&client.GetChatHistoryRequest{
+							ChatId:        chat.Id,
+							FromMessageId: message.ReplyToMessageId,
+							Limit:         1,
+							Offset:        -1,
+						})
+						if err != nil {
+							f.logger.Error("Error getting reply chat history", zap.Error(err), zap.Int64("replyID", message.ReplyToMessageId))
+							continue
+						}
+						if len(replyMessages.Messages) != 1 {
+							f.logger.Error("Error getting reply chat history", zap.Error(err), zap.Int64("replyID", message.ReplyToMessageId))
+							continue
+						}
+						if message.Content.MessageContentType() != "messageText" {
+							continue
+						}
+						text, msgLink = f.extractMessageText(replyMessages.Messages[0], chat)
 					}
-					if len(replyMessages.Messages) != 1 {
-						f.logger.Error("Error getting reply chat history", zap.Error(err), zap.Int64("replyID", message.ReplyToMessageId))
-						continue
+					lbl, location := f.parseLabelAndLocation(text, chat.City, true)
+					if lbl != "" {
+						_, err := f.db.SaveReport(chat.Id, &common.Report{time.Now(), msgLink, "", "", lbl}, location)
+						if err != nil {
+							f.logger.Error("Error saving report", zap.Error(err))
+						}
+						helpers.ForwardMessage(f.logger, f.bot, f.db, location, chat.Id, msgLink, "", "", lbl, false)
 					}
-					if message.Content.MessageContentType() != "messageText" {
-						continue
-					}
-					text, msgLink = f.extractMessageText(replyMessages.Messages[0], chat)
-				}
-				lbl, location := f.parseLabelAndLocation(text, chat.City, true)
-				if lbl != "" {
-					_, err := f.db.SaveReport(chat.Id, &common.Report{time.Now(), msgLink, "", "", lbl}, location)
-					if err != nil {
-						f.logger.Error("Error saving report", zap.Error(err))
-					}
-					helpers.ForwardMessage(f.logger, f.bot, f.db, location, chat.Id, msgLink, "", "", lbl, false)
 				}
 			}
 			if len(messages.Messages) > 0 {
